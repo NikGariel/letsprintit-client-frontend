@@ -5,8 +5,9 @@ import PrinterBottomSheet from "./PrinterBottomSheet";
 import "react-spring-bottom-sheet/dist/style.css";
 import { useLoaderData, useNavigate } from "react-router-dom";
 import { getLocations } from "../../api/printit";
-import { getUserLocation } from "../../api/location";
 import { Location, Printer } from "../../models/printit";
+import { useLocationStore } from "../../stores/location_ctx";
+import GeoLocationRequestSheet from "../GeoLocationRequestSheet";
 
 export async function load(): Promise<Location[]> {
   return await getLocations();
@@ -18,8 +19,12 @@ function PrintersMap() {
     location: Location;
   } | null>(null);
   const [bottomSheet, setBottomSheet] = useState(false);
-  const [userLocation, setUserLocation] = useState([55.75, 37.57]);
   const [zoom, setZoom] = useState(9);
+
+  const isHaveGeoLocation = useLocationStore((state) => state.isHaveGeoLocation);
+  const isCanGetGeoLocation = useLocationStore((state) => state.isCanGetGeoLocation);
+  const isHaveGeoLocationAccess = useLocationStore((state) => state.isHaveGeoLocationAccess);
+  const userLocation = useLocationStore((state) => state.coordinates);
 
   const mapRef = useRef<any>(null);
 
@@ -30,32 +35,35 @@ function PrintersMap() {
     navigate("/code_enter");
   }
 
-  async function getAndSetUserLocation() {
-    try {
-      let loc = await getUserLocation();
-      setUserLocation(loc);
-      setZoom(16);
-    } catch (e) {
-      console.log(e);
-    }
-  }
+  // async function getAndSetUserLocation() {
+  //   try {
+  //     let loc = await getUserLocation();
+  //     setUserLocation(loc);
+  //     setZoom(16);
+  //   } catch (e) {
+  //     console.log(e);
+  //   }
+  // }
 
   useEffect(() => {
-    getAndSetUserLocation().catch((e) => console.error(e));
-  }, []);
+    if(isHaveGeoLocation) {
+      setZoom(16);
+    }
+  }, [isHaveGeoLocationAccess]);
 
   return (
     <>
+      {(!isHaveGeoLocationAccess && isHaveGeoLocation && isCanGetGeoLocation) && <GeoLocationRequestSheet />}
       <Map
         instanceRef={mapRef}
         width="100%"
         height="100%"
         defaultState={{
           controls: ["zoomControl"],
-          center: userLocation,
-          zoom: zoom,
+          center: [userLocation.longitude, userLocation.latitude],
+          zoom: zoom
         }}
-        current={{ center: userLocation, zoom: zoom }}
+        current={{ center: [userLocation.longitude, userLocation.latitude], zoom: zoom }}
         modules={["control.ZoomControl"]}
       >
         {locations.map((location) => (
@@ -64,12 +72,12 @@ function PrintersMap() {
             geometry={[location.latitude, location.longitude]}
             options={{
               preset: "islands#lightBlueIcon",
-              iconColor: "#3b82f6",
+              iconColor: "#3b82f6"
             }}
             onClick={() => {
               setSelection({
                 printer: location.printers[0],
-                location: location,
+                location: location
               });
               setBottomSheet(true);
             }}

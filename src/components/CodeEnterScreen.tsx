@@ -13,15 +13,15 @@ function CodeEnterScreen() {
     setInput(e.target.value);
   }
 
-  function handleQrResult(result: any, error: any) {
+  async function handleQrResult(result: any, error: any) {
     if (!!result) {
       let text = result.text;
       let code = text.split("/").pop();
-      checkAndRedirectToPrinter(code);
+      await checkAndRedirectToPrinter(code);
     }
   }
 
-  async function checkAndRedirectToPrinter(printerCode: string) {
+  async function checkAndRedirectToPrinter(printerCode: string): Promise<void> {
     if ((await getPrinter(printerCode)) !== null) {
       navigate(`/printer/${printerCode}/new_order`, { replace: false });
     } else {
